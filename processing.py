@@ -101,7 +101,7 @@ def iniFiles(df, lang):
         if not(fileExists(dir)):
             textToAudioFile(df["frenchSound"][i], dir, lang)
 
-def readAsDF(filename):
+def readAsDF(filename, rootFolder):
     df = pl.read_csv(
         file=filename,
         encoding="Windows 1252",
@@ -113,7 +113,7 @@ def readAsDF(filename):
     df = df.rename({headers[0]: 'spanish', headers[1]: 'frenchSound'}) # rename cols
 
     # add root, folder, filename cols
-    df = df.with_column(pl.lit("Audio").alias('root'))
+    df = df.with_column(pl.lit(rootFolder).alias('root'))
     df = df.with_column(pl.lit("").alias('folder'))
     df = df.with_column(pl.lit("").alias('filename'))
 
@@ -149,4 +149,17 @@ def readAsDF(filename):
 
     return df
 
+def readConfigAsDF(filename):
+    df = pl.read_csv(
+        file=filename,
+        encoding="Windows 1252",
+        sep=";",
+        has_header=True,
+    )
 
+    # replace null and nan, drop duplicated rows
+    df = df.fill_nan("")
+    df = df.fill_null("")
+    df = df.unique()
+
+    return df

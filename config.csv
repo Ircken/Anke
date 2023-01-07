@@ -1,2 +1,2 @@
-language;filenameCSV;btnHsize;btnVsize;btnFont
-french;French.csv;;;
+lang;filenameCSV;rootFolder
+french;French.csv;French
