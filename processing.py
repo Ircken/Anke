@@ -101,6 +101,52 @@ def iniFiles(df, lang):
         if not(fileExists(dir)):
             textToAudioFile(df["frenchSound"][i], dir, lang)
 
+def readAsDF(filename):
+    df = pl.read_csv(
+        file=filename,
+        encoding="Windows 1252",
+        sep=";",
+        columns=[0,1],
+        has_header=False,
+    )
+    headers = df.columns # headers
+    df = df.rename({headers[0]: 'spanish', headers[1]: 'frenchSound'}) # rename cols
+
+    # add root, folder, filename cols
+    df = df.with_column(pl.lit("Audio").alias('root'))
+    df = df.with_column(pl.lit("").alias('folder'))
+    df = df.with_column(pl.lit("").alias('filename'))
+
+    # replace null and nan, drop duplicated rows
+    df = df.fill_nan("")
+    df = df.fill_null("")
+    df = df.unique()
+
+    # remove chars
+    df = df.with_columns(
+        [
+            pl.when(
+                True
+                ).then(
+                    pl.col('frenchSound').str.replace_all(rf'[*"<>|?¿!¡/]', ".") + ".mp3"
+                    ).otherwise(
+                        "ERROR").alias("filename")
+        ]
+    )
+    
+    folderName = ""
+    vecSpanish = df["spanish"]
+
+    for i in range(len(vecSpanish)):
+
+        if vecSpanish[i].startswith("Clase"):
+            folderName = vecSpanish[i].replace(" ", "")
+        else:
+            df[i, "folder"] = folderName # remove those chars
+    
+    # remove clases
+    df = df.filter(pl.col("spanish").str.starts_with("Clase") == False)
+
+    return df
 
 
-# git remote add origin git@github.com:Ircken/Anke.git

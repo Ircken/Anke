@@ -1,9 +1,12 @@
-# coding=UTF-8
+﻿import processing
 import gui
-import processing
 
-filename = "French.csv"
 
-df = processing.readAsDF(filename)
+if __name__ == "__main__":
 
-gui.display(df)
+    filename = "French.csv"
+    df = processing.readAsDF(filename)
+    processing.iniFiles(df, "fr")
+
+    app = gui.Win(df)
+    app.mainloop()
