@@ -1,10 +1,10 @@
-﻿import processing
+﻿import process
 import gui
-import processing
 
 if __name__ == "__main__":
 
-    configDF = processing.readConfigAsDF("config.csv")
+    # load config data
+    configDF = process.readConfigAsDF("config.csv")
 
     # config
     lang = configDF["lang"][0][:2]
@@ -12,10 +12,10 @@ if __name__ == "__main__":
     rootFolder = configDF["rootFolder"][0]
 
     # main df
-    df = processing.readAsDF(filename, rootFolder) 
+    df = process.readAsDF(filename, rootFolder) 
 
     # initializing files
-    processing.iniFiles(df, lang)
+    process.iniFiles(df, lang)
 
     app = gui.Win(df)
     app.mainloop()
