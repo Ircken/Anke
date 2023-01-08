@@ -1,4 +1,5 @@
 # coding=UTF-8
+import subprocess
 import os
 from gtts import gTTS
 import polars as pl
@@ -58,7 +59,6 @@ def readAsDF(filename):
     vecSpanish = df["spanish"]
 
     for i in range(len(vecSpanish)):
-
         if vecSpanish[i].startswith("Clase"):
             folderName = vecSpanish[i].replace(" ", "")
         else:
@@ -87,6 +87,7 @@ def fileExists(file_path):
     else:
         return False
 
+"""
 def iniFiles(df, lang):
 
     # create folder
@@ -100,8 +101,11 @@ def iniFiles(df, lang):
         # if not exists, create file
         if not(fileExists(dir)):
             textToAudioFile(df["frenchSound"][i], dir, lang)
+"""
+def iniFiles():
+    subprocess.check_call("AudioCreator.exe")
 
-def readAsDF(filename, rootFolder):
+def readAsDF(filename, rootFolder, createFilesFile):
     df = pl.read_csv(
         file=filename,
         encoding="Windows 1252",
@@ -134,6 +138,7 @@ def readAsDF(filename, rootFolder):
         ]
     )
     
+    # fill folder col
     folderName = ""
     vecSpanish = df["spanish"]
 
@@ -146,6 +151,10 @@ def readAsDF(filename, rootFolder):
     
     # remove clases
     df = df.filter(pl.col("spanish").str.starts_with("Clase") == False)
+
+    # save to create audio files
+    dfSave = df[:,1:]
+    dfSave.write_csv(createFilesFile, sep=";")
 
     return df
 
@@ -163,3 +172,9 @@ def readConfigAsDF(filename):
     df = df.unique()
 
     return df
+
+def createConfigFile(file_path):
+    if not (os.path.isfile(file_path)):
+        f = open(file_path, "a")
+        f.write("lang;filenameCSV;rootFolder;createFilesFile\nfrench;French.csv;French;dataFiles.csv")
+        f.close()
