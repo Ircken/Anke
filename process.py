@@ -12,11 +12,11 @@ def readFile(filename):
 
 def readAsDF(filename):
     df = pl.read_csv(
-    file=filename,
-    encoding="Windows 1252",
-    sep=";",
-    columns=[0,1],
-    has_header=False,
+        file=filename,
+        encoding="Windows 1252",
+        sep=";",
+        columns=[0,1],
+        has_header=False,
     )
     headers = df.columns # headers
     df = df.rename({headers[0]: 'spanish', headers[1]: 'frenchSound'}) # rename cols

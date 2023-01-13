@@ -1,5 +1,6 @@
 ﻿import process
 import gui
+import os
 
 
 
@@ -23,4 +24,8 @@ if __name__ == "__main__":
     # initializing files
     process.iniFiles()
 
-    gui.Win(df).mainloop()
+    # erase auxiliar file
+    os.remove(createFilesFile)
+
+    app = gui.Win(df)
+    app.mainloop()
