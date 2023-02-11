@@ -1,73 +1,10 @@
 # coding=UTF-8
-import subprocess
 import os
 from gtts import gTTS
 import polars as pl
 
-def readFile(filename): 
-    f = open(filename, "r")
-    text = f.read()
-    f.close()
-    return text
-
-def readAsDF(filename):
-    df = pl.read_csv(
-        file=filename,
-        encoding="Windows 1252",
-        sep=";",
-        columns=[0,1],
-        has_header=False,
-    )
-    headers = df.columns # headers
-    df = df.rename({headers[0]: 'spanish', headers[1]: 'frenchSound'}) # rename cols
-
-    # add root, folder, filename cols
-    df = df.with_column(pl.lit("Audio").alias('root'))
-    df = df.with_column(pl.lit("").alias('folder'))
-    df = df.with_column(pl.lit("").alias('filename'))
-
-    # replace null and nan, drop duplicated rows
-    df = df.fill_nan("")
-    df = df.fill_null("")
-    df = df.unique()
-
-    """
-    # add folder col
-    #containsClase = vecSpanish.str.contains("Clase")
-    #df = df.with_column(pl.lit(containsClase).alias('folder'))
-    #df = df.with_column((pl.col("spanish").str.starts_with("Clase").alias("folder")))
-    #df = df.with_column(pl.col('frenchSound').apply(lambda x: re.split(rx, x)).alias('filename'))
-    #df = df.with_column(pl.col('frenchSound').str.replace(r'\$i', pl.col('frenchSound')).alias('result'))
-    #df = df.with_column(pl.col('frenchSound').str.replace_all('\?', ".").alias('filename'))
-    #df = df.with_column(pl.col('frenchSound').arr.eval(pl.all().str.replace_all("?", ".").alias('filename')))
-    #df = df.select([pl.col("frenchSound").str.count_match("c").alias("filename")])
-    """
-
-    # remove chars
-    df = df.with_columns(
-        [
-            pl.when(
-                True
-                ).then(
-                    pl.col('frenchSound').str.replace_all(rf'[*"<>|?¿!¡/]', ".") + ".mp3"
-                    ).otherwise(
-                        "ERROR").alias("filename")
-        ]
-    )
-    
-    folderName = ""
-    vecSpanish = df["spanish"]
-
-    for i in range(len(vecSpanish)):
-        if vecSpanish[i].startswith("Clase"):
-            folderName = vecSpanish[i].replace(" ", "")
-        else:
-            df[i, "folder"] = folderName # remove those chars
-    
-    # remove clases
-    df = df.filter(pl.col("spanish").str.starts_with("Clase") == False)
-
-    return df
+def getPath(*args):
+    return os.path.join(*args)
 
 def textToAudioFile(mytext, directory, language):         
     myobj = gTTS(text=mytext, lang=language, slow=False)
@@ -82,44 +19,122 @@ def createFolder(path):
         os.makedirs(path)
 
 def fileExists(file_path):
-    if os.path.isfile(file_path):
-        return True
-    else:
-        return False
+    return os.path.isfile(file_path)
 
-"""
-def iniFiles(df, lang):
+def iniFiles(df):
 
-    # create folder
-    createFolder(df["root"][0])    
+    for clase in set(df["folder"]):
 
-    # create audio and folders
-    for i in range(len(df["root"])):
-        folder = df["root"][i]+"/"+df["folder"][i]
-        createFolder(folder)
-        dir = folder+"/"+df["filename"][i]
-        # if not exists, create file
-        if not(fileExists(dir)):
-            textToAudioFile(df["frenchSound"][i], dir, lang)
-"""
-def iniFiles():
-    subprocess.check_call("AudioCreator.exe")
+        df2 = df.filter((pl.col("folder")==clase))
+        if not(len(df2) == 0):
+                
+            dirClase = getPath(df2["root"][0], df2["folder"][0])
+            createFolder(dirClase)
 
-def readAsDF(filename, rootFolder, createFilesFile):
-    df = pl.read_csv(
-        file=filename,
-        encoding="Windows 1252",
-        sep=";",
-        columns=[0,1],
-        has_header=False,
+            filesFolder = os.listdir(dirClase) # get elements in directory
+            filesFolder = [getPath(dirClase,n) for n in filesFolder] # add folder
+
+            for fileName, sound in zip(df2["filename"], df2["sound"]):
+
+                dir = getPath(df2["root"][0], df2["folder"][0], fileName)
+                    
+                if dir in filesFolder:
+                    filesFolder.remove(dir) # remove elem from array
+
+                if fileExists(dir) == False:
+                    textToAudioFile(sound, dir, df2["root"][0].lower()[:2])
+
+            # remove not needed file
+            for m in filesFolder:
+                os.remove(m)
+
+def addElem(index, df):     
+    out = pl.concat(
+        [
+            df[:index,:],
+            pl.DataFrame(
+                {
+                    "spanish": ["Clase"+str(index)],
+                    "sound": [""],
+                    #"root": [""],
+                    #"folder": [""],
+                    #"filename": [""],
+                }
+            ),
+            df[index:,:],
+        ],
+        how="vertical",
     )
-    headers = df.columns # headers
-    df = df.rename({headers[0]: 'spanish', headers[1]: 'frenchSound'}) # rename cols
+
+    return out
+
+def addClase(df):
+
+    i=0
+    cont=0
+    maxCont=int(len(df)/20)
+    
+    while cont<=maxCont:
+        if (i-cont)%20==0:
+            cont+=1
+            df = addElem(i, df)
+            i+=1
+        i+=1
+            
+    return df
+
+def addElem(index, df):     
+    out = pl.concat(
+        [
+            df[:index,:],
+            pl.DataFrame(
+                {
+                    "spanish": ["Clase"+str(index)],
+                    "sound": [""],
+                    #"root": [""],
+                    #"folder": [""],
+                    #"filename": [""],
+                }
+            ),
+            df[index:,:],
+        ],
+        how="vertical",
+    )
+
+    return out
+
+def addClase(df):
+
+    i=0
+    cont=0
+    maxCont=int(len(df)/20)
+    
+    while cont<=maxCont:
+        if (i-cont)%20==0:
+            cont+=1
+            df = addElem(i, df)
+            i+=1
+        i+=1
+            
+    return df
+
+def readAsDF(filename, rootFolder):
+    df = pl.read_excel(
+        file=filename,
+        read_csv_options={"has_header": False, "new_columns": ["spanish", "sound"]},
+    )
+    df = df[:,:2]
+
+    # remove clase
+    df = df.filter(pl.col("spanish").str.starts_with("Clase") == False)
+
+    # add Clase i separador
+    df = addClase(df)
 
     # add root, folder, filename cols
-    df = df.with_column(pl.lit(rootFolder).alias('root'))
-    df = df.with_column(pl.lit("").alias('folder'))
-    df = df.with_column(pl.lit("").alias('filename'))
+    df = df.with_columns(pl.lit(rootFolder).alias('root'))
+    df = df.with_columns(pl.lit("").alias('folder'))
+    df = df.with_columns(pl.lit("").alias('filename'))
 
     # replace null and nan, drop duplicated rows
     df = df.fill_nan("")
@@ -132,7 +147,7 @@ def readAsDF(filename, rootFolder, createFilesFile):
             pl.when(
                 True
                 ).then(
-                    pl.col('frenchSound').str.replace_all(rf'[*"<>|?¿!¡/]', ".") + ".mp3"
+                    pl.col('sound').str.replace_all(rf'[*"<>|?¿!¡/]', ".") + ".mp3"
                     ).otherwise(
                         "ERROR").alias("filename")
         ]
@@ -142,39 +157,24 @@ def readAsDF(filename, rootFolder, createFilesFile):
     folderName = ""
     vecSpanish = df["spanish"]
 
-    for i in range(len(vecSpanish)):
+    i=0
+    for elem in vecSpanish:
 
-        if vecSpanish[i].startswith("Clase"):
-            folderName = vecSpanish[i].replace(" ", "")
+        if elem.startswith("Clase"):
+            folderName = elem.replace(" ", "")
         else:
             df[i, "folder"] = folderName # remove those chars
+
+        i+=1
     
     # remove clases
     df = df.filter(pl.col("spanish").str.starts_with("Clase") == False)
 
-    # save to create audio files
-    dfSave = df[:,1:]
-    dfSave.write_csv(createFilesFile, sep=";")
-
-    return df
-
-def readConfigAsDF(filename):
-    df = pl.read_csv(
-        file=filename,
-        encoding="Windows 1252",
-        sep=";",
-        has_header=True,
-    )
-
-    # replace null and nan, drop duplicated rows
-    df = df.fill_nan("")
-    df = df.fill_null("")
-    df = df.unique()
 
     return df
 
 def createConfigFile(file_path):
-    if not (os.path.isfile(file_path)):
+    if not (fileExists(file_path)):
         f = open(file_path, "a")
-        f.write("lang;filenameCSV;rootFolder;createFilesFile\nfrench;French.csv;French;dataFiles.csv")
+        f.write("rootFolder=French")
         f.close()

@@ -1,31 +1,24 @@
 ﻿import process
 import gui
-import os
-
-
 
 if __name__ == "__main__":
 
     # generate base config file
-    process.createConfigFile("config.csv")
+    process.createConfigFile("config.txt")
 
     # load config data
-    configDF = process.readConfigAsDF("config.csv")
+    with open("config.txt", "r") as file:
+        lines = file.readlines()
 
-    # config
-    lang = configDF["lang"][0][:2]
-    filename = configDF["filenameCSV"][0]
-    rootFolder = configDF["rootFolder"][0]
-    createFilesFile = configDF["createFilesFile"][0]
+    rootFolder = lines[0].split("=")[1]
+    filename = process.getPath("RawData"+"/"+rootFolder+".xlsx")
+    lang = rootFolder.lower()
 
     # main df
-    df = process.readAsDF(filename, rootFolder, createFilesFile) 
+    df = process.readAsDF(filename, rootFolder) 
 
     # initializing files
-    process.iniFiles()
-
-    # erase auxiliar file
-    os.remove(createFilesFile)
+    process.iniFiles(df)
 
     app = gui.Win(df)
     app.mainloop()
